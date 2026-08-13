@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <g fill="none" stroke="#E0A458" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="512" cy="512" r="340" stroke-opacity="0.16" stroke-width="10"/>
+    <circle cx="512" cy="512" r="272" stroke-opacity="0.26" stroke-width="10"/>
+    <circle cx="512" cy="512" r="204" stroke-opacity="0.38" stroke-width="10"/>
+    <path stroke-width="52" d="
+      M 360 360
+      H 664
+      Q 680 360 680 376
+      V 648
+      Q 680 664 664 664
+      H 360
+      Q 344 664 344 648
+      V 452
+      Q 344 436 360 436
+      H 572
+      Q 588 436 588 452
+      V 572
+      Q 588 588 572 588
+      H 452
+      Q 436 588 436 572
+      V 520
+      Q 436 512 444 512
+      H 512"/>
+  </g>
+</svg>

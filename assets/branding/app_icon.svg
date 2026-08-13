@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <rect width="1024" height="1024" fill="#0A0C0E"/>
+  <g fill="none" stroke="#E0A458" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="512" cy="512" r="400" stroke-opacity="0.16" stroke-width="12"/>
+    <circle cx="512" cy="512" r="320" stroke-opacity="0.26" stroke-width="12"/>
+    <circle cx="512" cy="512" r="240" stroke-opacity="0.38" stroke-width="12"/>
+    <path stroke-width="58" d="
+      M 320 320
+      H 704
+      Q 720 320 720 336
+      V 688
+      Q 720 704 704 704
+      H 320
+      Q 304 704 304 688
+      V 432
+      Q 304 416 320 416
+      H 592
+      Q 608 416 608 432
+      V 592
+      Q 608 608 592 608
+      H 432
+      Q 416 608 416 592
+      V 520
+      Q 416 512 424 512
+      H 512"/>
+  </g>
+</svg>
