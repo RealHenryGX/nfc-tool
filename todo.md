@@ -21,6 +21,10 @@ Status: **parity backlog closed for shippable FOSS surface** (2026-07-15). Root/
 - [x] Unit tests
 - [x] Nav: Home / Read / Write / Tasks / Tools / More
 - [x] Onboarding gate
+- [x] GoRouter shell + `/record` route (`app_router.dart`)
+- [x] Riverpod feature providers (home, read, tools, tasks)
+- [x] NFC core: `NfcPort`, `nfc_errors.dart`, `NfcTagDetails` model
+- [x] Shared batch-write dialog + hex utils
 
 ---
 
@@ -96,6 +100,7 @@ Status: **parity backlog closed for shippable FOSS surface** (2026-07-15). Root/
 | V7 | Debug console | `flutter test` (+debug_log_test) | PASS 17/17 | 2026-07-15 |
 | V8 | UI + About/MIT/GitHub | analyze + test + debug APK | PASS | 2026-07-15 |
 | V9 | Premium UX pass | analyze + `flutter test` 20/20 + debug APK | PASS | 2026-07-15 |
+| V10 | UI + NFC refactor | `flutter analyze lib` + `flutter test` 33/33 | PASS | 2026-08-13 |
 
 ---
 
