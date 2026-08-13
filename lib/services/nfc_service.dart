@@ -1,49 +1,36 @@
 import 'dart:typed_data';
+
 import 'package:flutter_nfc_kit/flutter_nfc_kit.dart' as kit;
+import 'package:nfc_manager/ndef_record.dart';
 import 'package:nfc_manager/nfc_manager.dart';
 import 'package:nfc_manager/nfc_manager_android.dart';
-import 'package:nfc_manager/ndef_record.dart';
-import '../models/ndef_record.dart';
+
 import '../core/debug/app_debug.dart';
+import '../core/nfc/nfc_errors.dart';
 import '../core/nfc/nfc_helper.dart';
+import '../core/nfc/nfc_port.dart';
+import '../core/utils/hex.dart';
+import '../models/ndef_record.dart';
+import '../models/nfc_tag_details.dart';
 
-class NfcTagDetails {
-  final String? uid;
-  final List<String> technologies;
-  final bool isNdefSupported;
-  final bool? isWritable;
-  final int? maxSize;
-  final List<NdefRecordModel> records;
-  final String? type;
+export '../models/nfc_tag_details.dart';
 
-  NfcTagDetails({
-    this.uid,
-    required this.technologies,
-    required this.isNdefSupported,
-    this.isWritable,
-    this.maxSize,
-    required this.records,
-    this.type,
-  });
-}
-
-enum NfcSessionMode { read, write, erase, lock, format }
-
+/// NDEF / Classic session use-cases on top of [NfcPort].
 class NfcService {
-  static Future<bool> isAvailable() async {
-    try {
-      final availability = await NfcManager.instance.checkAvailability();
-      return availability == NfcAvailability.enabled;
-    } catch (_) {
-      return false;
-    }
+  static Future<bool> isAvailable() => NfcPort.isManagerAvailable();
+
+  static Future<bool> _ensureAvailable(Function(String error) onError) async {
+    if (await isAvailable()) return true;
+    AppDebug.instance.nfc('NFC unavailable', level: DebugLevel.error);
+    onError('NFC not available or disabled');
+    return false;
   }
 
-  static String _getHex(Uint8List bytes) {
-    return bytes
-        .map((e) => e.toRadixString(16).padLeft(2, '0').toUpperCase())
-        .join(':');
-  }
+  static Set<NfcPollingOption> get _polling => {
+        NfcPollingOption.iso14443,
+        NfcPollingOption.iso15693,
+        NfcPollingOption.iso18092,
+      };
 
   static NfcTagDetails parseTag(NfcTag tag) {
     final techList = <String>[];
@@ -88,8 +75,9 @@ class NfcService {
       }
     }
 
-    final uid =
-        idBytes != null && idBytes.isNotEmpty ? _getHex(idBytes) : null;
+    final uid = idBytes != null && idBytes.isNotEmpty
+        ? bytesToHex(idBytes, separator: ':')
+        : null;
 
     return NfcTagDetails(
       uid: uid,
@@ -102,22 +90,13 @@ class NfcService {
     );
   }
 
-  static Set<NfcPollingOption> get _polling => {
-        NfcPollingOption.iso14443,
-        NfcPollingOption.iso15693,
-        NfcPollingOption.iso18092,
-      };
-
   static Future<void> startReadSession({
     required Function(NfcTagDetails tagDetails) onDiscovered,
     required Function(String error) onError,
   }) async {
     try {
-      if (!await isAvailable()) {
-        AppDebug.instance.nfc('read: NFC unavailable', level: DebugLevel.error);
-        onError('NFC not available or disabled');
-        return;
-      }
+      if (!await _ensureAvailable(onError)) return;
+      await NfcPort.prepareManagerPath();
 
       AppDebug.instance.nfc('session start mode=read');
       await NfcManager.instance.startSession(
@@ -158,11 +137,8 @@ class NfcService {
     required Function(String error) onError,
   }) async {
     try {
-      if (!await isAvailable()) {
-        AppDebug.instance.nfc('write: NFC unavailable', level: DebugLevel.error);
-        onError('NFC not available or disabled');
-        return;
-      }
+      if (!await _ensureAvailable(onError)) return;
+      await NfcPort.prepareManagerPath();
 
       AppDebug.instance.nfc('session start mode=write records=${records.length}');
       await NfcManager.instance.startSession(
@@ -177,19 +153,7 @@ class NfcService {
             onComplete('Tag written successfully');
           } catch (e) {
             AppDebug.instance.nfc('write failed: $e', level: DebugLevel.error);
-            final msg = e.toString().toLowerCase();
-            if (msg.contains('out of date') || msg.contains('securityexception')) {
-              onError(
-                'Write interrupted — keep the tag still against the phone and try again.',
-              );
-            } else if (msg.contains('ioexception')) {
-              onError(
-                'Write failed (IOException). Hold tag steady, ensure it is '
-                'writable / not locked, then retry.',
-              );
-            } else {
-              onError('Write failed: $e');
-            }
+            onError(mapNfcWriteException(e, verb: 'Write'));
           } finally {
             await stopSession();
           }
@@ -207,35 +171,20 @@ class NfcService {
     required Function(String error) onError,
   }) async {
     try {
-      if (!await isAvailable()) {
-        onError('NFC not available or disabled');
-        return;
-      }
+      if (!await _ensureAvailable(onError)) return;
+      await NfcPort.prepareManagerPath();
 
       AppDebug.instance.nfc('session start mode=erase');
       await NfcManager.instance.startSession(
         pollingOptions: _polling,
         onDiscovered: (tag) async {
           try {
-            // Android NdefMessage requires ≥1 record; TNF_EMPTY clears content.
             await _writeEmptyNdef(tag);
             AppDebug.instance.nfc('erase OK');
             onComplete('Tag erased successfully');
           } catch (e) {
             AppDebug.instance.nfc('erase failed: $e', level: DebugLevel.error);
-            final msg = e.toString().toLowerCase();
-            if (msg.contains('out of date') || msg.contains('securityexception')) {
-              onError(
-                'Erase interrupted — keep the tag still against the phone and try again.',
-              );
-            } else if (msg.contains('ioexception')) {
-              onError(
-                'Erase failed (IOException). Hold tag steady, ensure it is '
-                'writable / not locked, then retry.',
-              );
-            } else {
-              onError('Erase failed: $e');
-            }
+            onError(mapNfcWriteException(e, verb: 'Erase'));
           } finally {
             await stopSession();
           }
@@ -253,10 +202,8 @@ class NfcService {
     bool Function()? shouldContinue,
   }) async {
     try {
-      if (!await isAvailable()) {
-        onError('NFC not available or disabled');
-        return;
-      }
+      if (!await _ensureAvailable(onError)) return;
+      await NfcPort.prepareManagerPath();
 
       AppDebug.instance.nfc('session start mode=batch records=${records.length}');
       await NfcManager.instance.startSession(
@@ -281,19 +228,7 @@ class NfcService {
             }
           } catch (e) {
             AppDebug.instance.nfc('batch write failed: $e', level: DebugLevel.error);
-            final msg = e.toString().toLowerCase();
-            if (msg.contains('out of date') || msg.contains('securityexception')) {
-              onError(
-                'Write interrupted — keep the tag still against the phone and try again.',
-              );
-            } else if (msg.contains('ioexception')) {
-              onError(
-                'Write failed (IOException). Hold tag steady, ensure it is '
-                'writable / not locked, then retry.',
-              );
-            } else {
-              onError('Write failed: $e');
-            }
+            onError(mapNfcWriteException(e, verb: 'Write'));
             await stopSession();
           }
         },
@@ -315,10 +250,8 @@ class NfcService {
     required Function(String error) onError,
   }) async {
     try {
-      if (!await isAvailable()) {
-        onError('NFC not available or disabled');
-        return;
-      }
+      if (!await _ensureAvailable(onError)) return;
+      await NfcPort.prepareManagerPath();
       await NfcManager.instance.startSession(
         pollingOptions: _polling,
         onDiscovered: (tag) async {
@@ -349,10 +282,8 @@ class NfcService {
     required Function(String error) onError,
   }) async {
     try {
-      if (!await isAvailable()) {
-        onError('NFC not available or disabled');
-        return;
-      }
+      if (!await _ensureAvailable(onError)) return;
+      await NfcPort.prepareManagerPath();
       AppDebug.instance.nfc('session start mode=format');
       await NfcManager.instance.startSession(
         pollingOptions: _polling,
@@ -424,11 +355,13 @@ class NfcService {
     await ndef.writeNdefMessage(NdefMessage(records: ndefRecords));
   }
 
+  /// Kit path — releases any manager session first ([NfcPort.prepareKitPath]).
   static Future<String> readRawHex({
     required Function(String update) onUpdate,
     required Function(String error) onError,
   }) async {
     try {
+      await NfcPort.prepareKitPath();
       AppDebug.instance.nfc('raw hex poll…');
       final tag = await kit.FlutterNfcKit.poll(
         timeout: const Duration(seconds: 15),

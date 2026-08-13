@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../models/ndef_record.dart';
 import '../../services/nfc_service.dart';
 import '../widgets/radar_pulse.dart';
+import 'nfc_errors.dart';
 
 enum NfcDialogMode { read, write, erase, lock, format }
 
@@ -119,29 +120,6 @@ class _NfcSessionSheetState extends State<NfcSessionSheet> {
     super.dispose();
   }
 
-  static String _friendlyError(String err) {
-    final lower = err.toLowerCase();
-    if (lower.contains('out of date') || lower.contains('securityexception')) {
-      return 'Tag moved or RF dropped mid-write. Hold still and retry.';
-    }
-    if (lower.contains('ioexception') || lower.contains('tag was lost')) {
-      return 'Hold the tag steady against the phone for 2–3 seconds '
-          '(or the tag may be locked / full).';
-    }
-    if (lower.contains('read-only') || lower.contains('not writable')) {
-      return 'Tag is read-only / locked. Cannot write.';
-    }
-    if (lower.contains('does not support ndef')) {
-      return 'Tag does not support NDEF.';
-    }
-    if (lower.contains('nfc not available')) {
-      return 'NFC is off or unavailable. Enable NFC in Settings.';
-    }
-    final firstLine = err.split('\n').first.trim();
-    if (firstLine.length > 160) return '${firstLine.substring(0, 157)}…';
-    return firstLine;
-  }
-
   void _finishOk([dynamic result = true]) {
     if (!mounted) return;
     HapticFeedback.mediumImpact();
@@ -156,7 +134,7 @@ class _NfcSessionSheetState extends State<NfcSessionSheet> {
     HapticFeedback.heavyImpact();
     setState(() {
       _isError = true;
-      _statusMessage = _friendlyError(err);
+      _statusMessage = friendlyNfcError(err);
     });
   }
 
@@ -264,16 +242,16 @@ class _NfcSessionSheetState extends State<NfcSessionSheet> {
               height: 96,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.green.shade600,
+                color: theme.colorScheme.tertiary,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.green.withValues(alpha: 0.35),
+                    color: theme.colorScheme.tertiary.withValues(alpha: 0.35),
                     blurRadius: 18,
                     offset: const Offset(0, 6),
                   ),
                 ],
               ),
-              child: const Icon(Icons.check_rounded, size: 48, color: Colors.white),
+              child: Icon(Icons.check_rounded, size: 48, color: theme.colorScheme.onTertiary),
             )
           else if (_isError)
             Container(
@@ -283,7 +261,7 @@ class _NfcSessionSheetState extends State<NfcSessionSheet> {
                 shape: BoxShape.circle,
                 color: theme.colorScheme.error,
               ),
-              child: const Icon(Icons.error_outline_rounded, size: 48, color: Colors.white),
+              child: Icon(Icons.error_outline_rounded, size: 48, color: theme.colorScheme.onError),
             )
           else
             RadarPulse(

@@ -5,6 +5,7 @@ import 'package:nfc_manager/nfc_manager.dart';
 import 'package:nfc_manager/nfc_manager_android.dart';
 
 import '../core/debug/app_debug.dart';
+import '../core/nfc/nfc_port.dart';
 
 /// Mifare Classic sector dump / block write via `nfc_manager`.
 class MifareClassicService {
@@ -20,11 +21,11 @@ class MifareClassicService {
       throw ArgumentError('Classic key must be 6 bytes');
     }
 
-    final availability = await NfcManager.instance.checkAvailability();
-    if (availability != NfcAvailability.enabled) {
+    if (!await NfcPort.isManagerAvailable()) {
       throw StateError('NFC not available or disabled');
     }
 
+    await NfcPort.prepareManagerPath();
     await NfcManager.instance.stopSession();
     final done = Completer<String>();
     AppDebug.instance.nfc(
@@ -108,6 +109,10 @@ class MifareClassicService {
       'Classic writeBlock sector=$sectorIndex blockInSector=$blockInSector '
       'data=${AppDebug.hex(data16)}',
     );
+    if (!await NfcPort.isManagerAvailable()) {
+      throw StateError('NFC not available or disabled');
+    }
+    await NfcPort.prepareManagerPath();
     await NfcManager.instance.stopSession();
     final done = Completer<void>();
     await NfcManager.instance.startSession(

@@ -2,14 +2,28 @@ import 'dart:typed_data';
 import 'package:flutter_nfc_kit/flutter_nfc_kit.dart' as kit;
 
 import '../core/debug/app_debug.dart';
+import '../core/nfc/nfc_port.dart';
+import '../core/utils/hex.dart';
 
 /// Low-level tag memory helpers (Ultralight / NTAG via NFC-A transceive).
+///
+/// Kit path — always [NfcPort.prepareKitPath] before poll.
 class TagMemoryService {
   static Future<List<int>> _tx(List<int> cmd) async {
     AppDebug.instance.apdu('TX ${AppDebug.hex(cmd)}');
     final resp = await kit.FlutterNfcKit.transceive(cmd);
     AppDebug.instance.apdu('RX ${AppDebug.hex(resp)}');
     return resp;
+  }
+
+  static Future<kit.NFCTag> _poll({
+    Duration timeout = const Duration(seconds: 20),
+  }) async {
+    await NfcPort.prepareKitPath();
+    return kit.FlutterNfcKit.poll(
+      timeout: timeout,
+      androidPlatformSound: true,
+    );
   }
 
   /// Read Ultralight/NTAG pages starting at [startPage], [pageCount] pages (4 bytes each).
@@ -20,7 +34,7 @@ class TagMemoryService {
   }) async {
     try {
       AppDebug.instance.nfc('UL dump pages=$startPage..${startPage + pageCount - 1}');
-      await kit.FlutterNfcKit.poll(timeout: timeout, androidPlatformSound: true);
+      await _poll(timeout: timeout);
       final out = BytesBuilder();
       for (var page = startPage; page < startPage + pageCount; page++) {
         final cmd = Uint8List.fromList([0x30, page & 0xFF]); // READ
@@ -46,10 +60,7 @@ class TagMemoryService {
       throw ArgumentError('Ultralight page must be exactly 4 bytes');
     }
     try {
-      await kit.FlutterNfcKit.poll(
-        timeout: const Duration(seconds: 20),
-        androidPlatformSound: true,
-      );
+      await _poll();
       final cmd = Uint8List.fromList([0xA2, page & 0xFF, ...fourBytes]); // WRITE
       await _tx(cmd);
     } finally {
@@ -62,14 +73,11 @@ class TagMemoryService {
   /// Raw hex transceive session: poll once, send [hexCommand] (space-separated).
   static Future<String> transceiveHex(String hexCommand) async {
     try {
-      final tag = await kit.FlutterNfcKit.poll(
-        timeout: const Duration(seconds: 20),
-        androidPlatformSound: true,
-      );
+      final tag = await _poll();
       final bytes = _parseHex(hexCommand);
       AppDebug.instance.nfc('transceive uid=${tag.id}');
       final resp = await _tx(bytes);
-      return 'UID=${tag.id}\nTX=${_toHex(bytes)}\nRX=${_toHex(Uint8List.fromList(resp))}';
+      return 'UID=${tag.id}\nTX=${bytesToHex(bytes)}\nRX=${bytesToHex(Uint8List.fromList(resp))}';
     } finally {
       try {
         await kit.FlutterNfcKit.finish();
@@ -86,16 +94,13 @@ class TagMemoryService {
       throw ArgumentError('PWD=4 bytes, PACK=2 bytes');
     }
     try {
-      await kit.FlutterNfcKit.poll(
-        timeout: const Duration(seconds: 20),
-        androidPlatformSound: true,
-      );
+      await _poll();
       final cmd = Uint8List.fromList([0x1B, ...pwd4]); // PWD_AUTH
       final resp = await _tx(cmd);
       final ok = resp.length >= 2 && resp[0] == pack2[0] && resp[1] == pack2[1];
       return ok
-          ? 'AUTH OK PACK=${_toHex(Uint8List.fromList(resp))}'
-          : 'AUTH response=${_toHex(Uint8List.fromList(resp))} (PACK mismatch?)';
+          ? 'AUTH OK PACK=${bytesToHex(Uint8List.fromList(resp))}'
+          : 'AUTH response=${bytesToHex(Uint8List.fromList(resp))} (PACK mismatch?)';
     } finally {
       try {
         await kit.FlutterNfcKit.finish();
@@ -112,10 +117,7 @@ class TagMemoryService {
       throw ArgumentError('Dump length must be multiple of 4 bytes');
     }
     try {
-      await kit.FlutterNfcKit.poll(
-        timeout: const Duration(seconds: 25),
-        androidPlatformSound: true,
-      );
+      await _poll(timeout: const Duration(seconds: 25));
       var page = startPage;
       for (var i = 0; i < dump.length; i += 4) {
         final four = dump.sublist(i, i + 4);
@@ -142,10 +144,7 @@ class TagMemoryService {
       throw ArgumentError('PWD=4 bytes, PACK=2 bytes');
     }
     try {
-      await kit.FlutterNfcKit.poll(
-        timeout: const Duration(seconds: 25),
-        androidPlatformSound: true,
-      );
+      await _poll(timeout: const Duration(seconds: 25));
       // PWD is 4 bytes page; PACK is often packed with RFUI — write PACK into page start
       await _tx(Uint8List.fromList([0xA2, pwdPage & 0xFF, ...pwd4]));
       final packPageBytes = Uint8List.fromList([pack2[0], pack2[1], 0x00, 0x00]);
@@ -166,10 +165,7 @@ class TagMemoryService {
     Uint8List? pack2ForAuth,
   }) async {
     try {
-      await kit.FlutterNfcKit.poll(
-        timeout: const Duration(seconds: 25),
-        androidPlatformSound: true,
-      );
+      await _poll(timeout: const Duration(seconds: 25));
       if (pwd4ForAuth != null &&
           pwd4ForAuth.length == 4 &&
           pack2ForAuth != null &&
@@ -201,7 +197,4 @@ class TagMemoryService {
     }
     return out;
   }
-
-  static String _toHex(Uint8List bytes) =>
-      bytes.map((e) => e.toRadixString(16).padLeft(2, '0').toUpperCase()).join(' ');
 }

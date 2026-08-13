@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:nfc_manager/ndef_record.dart';
 import '../../models/ndef_record.dart';
+import '../utils/hex.dart';
 
 class NfcHelper {
   static const List<String> _uriPrefixes = [
@@ -96,7 +97,7 @@ class NfcHelper {
         final mac = _parseBluetoothOob(record.payload);
         return NdefRecordModel(
           type: 'bluetooth',
-          payload: {'mac': mac ?? _bytesToHex(record.payload)},
+          payload: {'mac': mac ?? bytesToHex(record.payload, separator: ':')},
         );
       } else if (typeStr == 'application/x-nfctoolbox-task') {
         final raw = utf8.decode(record.payload, allowMalformed: true);
@@ -685,7 +686,4 @@ class NfcHelper {
     }
     return utf8.decode(textBytes, allowMalformed: true);
   }
-
-  static String _bytesToHex(Uint8List bytes) =>
-      bytes.map((e) => e.toRadixString(16).padLeft(2, '0').toUpperCase()).join(':');
 }
