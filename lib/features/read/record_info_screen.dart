@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/widgets/app_ui.dart';
 import '../../models/ndef_record.dart';
 
 class RecordInfoScreen extends StatelessWidget {
@@ -22,9 +23,7 @@ class RecordInfoScreen extends StatelessWidget {
             icon: const Icon(Icons.copy),
             onPressed: () {
               Clipboard.setData(ClipboardData(text: jsonPretty));
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Copied JSON')),
-              );
+              showAppSnack(context, 'Copied JSON');
             },
           ),
         ],
@@ -48,12 +47,12 @@ class RecordInfoScreen extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.black87,
+              color: theme.colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(12),
             ),
             child: SelectableText(
               jsonPretty,
-              style: const TextStyle(color: Colors.greenAccent, fontFamily: 'monospace', fontSize: 12),
+              style: TextStyle(color: theme.colorScheme.primary, fontFamily: 'monospace', fontSize: 12),
             ),
           ),
         ],

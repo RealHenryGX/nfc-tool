@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
-import 'dart:io';
 
 import '../../core/widgets/app_ui.dart';
 import 'settings_provider.dart';
@@ -15,10 +12,12 @@ class SettingsScreen extends ConsumerWidget {
   void _exportBackup(BuildContext context, WidgetRef ref) async {
     final jsonStr = ref.read(templatesProvider.notifier).exportToJson();
     try {
-      final tempDir = await getTemporaryDirectory();
-      final file = File('${tempDir.path}/nfc_toolbox_backup.json');
-      await file.writeAsString(jsonStr);
-      await Share.shareXFiles([XFile(file.path)], text: 'NFC Toolbox Backup JSON');
+      await shareAppTempFile(
+        fileName: 'nfc_toolbox_backup.json',
+        contents: jsonStr,
+        mimeType: 'application/json',
+        subject: 'NFC Toolbox Backup JSON',
+      );
     } catch (e) {
       if (context.mounted) {
         showAppSnack(context, 'Backup failed: $e', isError: true);
@@ -71,25 +70,16 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   void _resetApp(BuildContext context, WidgetRef ref) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Reset Application?'),
-        content: const Text(
+    final confirm = await confirmAppAction(
+      context,
+      title: 'Reset Application?',
+      message:
           'This will delete all saved templates, history records, and configurations. This is permanent!',
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Reset Everything'),
-          ),
-        ],
-      ),
+      confirmLabel: 'Reset Everything',
+      destructive: true,
     );
 
-    if (confirm == true) {
+    if (confirm) {
       await ref.read(templatesProvider.notifier).clearAll();
       await ref.read(historyProvider.notifier).clearAll();
       if (context.mounted) {

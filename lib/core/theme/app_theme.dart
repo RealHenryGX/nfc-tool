@@ -10,6 +10,9 @@ class AppTheme {
   /// Amber accent (dark default); used as Material seed / primary.
   static const Color seed = StackntraceTokens.darkAccent;
 
+  /// Bottom [NavigationBar] height — keep snackbars / insets in sync with this.
+  static const double navBarHeight = 64;
+
   static ThemeData light() {
     final scheme = ColorScheme.light(
       primary: StackntraceTokens.lightAccent,
@@ -118,15 +121,15 @@ class AppTheme {
       ),
       navigationBarTheme: NavigationBarThemeData(
         elevation: 0,
-        height: 70,
+        height: navBarHeight,
         backgroundColor: navBg ?? scaffoldBg ?? scheme.surface,
         indicatorColor: scheme.primaryContainer,
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+        labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
         overlayColor: WidgetStatePropertyAll(scheme.primary.withValues(alpha: 0.08)),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
           return IconThemeData(
-            size: selected ? 26 : 24,
+            size: selected ? 24 : 22,
             color: selected ? scheme.onPrimaryContainer : scheme.onSurfaceVariant,
           );
         }),
@@ -169,10 +172,16 @@ class AppTheme {
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        insetPadding: const EdgeInsets.fromLTRB(16, 0, 16, 88),
+        insetPadding: const EdgeInsets.fromLTRB(16, 0, 16, navBarHeight + 16),
       ),
       dialogTheme: DialogThemeData(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(
+          minimumSize: const Size(48, 48),
+          tapTargetSize: MaterialTapTargetSize.padded,
+        ),
       ),
       listTileTheme: ListTileThemeData(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

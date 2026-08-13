@@ -2,6 +2,8 @@ import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
 
+import '../utils/hex.dart';
+
 import '../storage/storage_service.dart';
 
 enum DebugLevel { info, warn, error }
@@ -107,16 +109,6 @@ class AppDebug extends ChangeNotifier {
   String exportText() => _entries.map((e) => e.toString()).join('\n');
 
   /// Hex dump helper for APDU / raw buffers.
-  static String hex(List<int> bytes, {int group = 1}) {
-    final parts = <String>[];
-    for (var i = 0; i < bytes.length; i++) {
-      parts.add(bytes[i].toRadixString(16).padLeft(2, '0').toUpperCase());
-    }
-    if (group <= 1) return parts.join(' ');
-    final grouped = <String>[];
-    for (var i = 0; i < parts.length; i += group) {
-      grouped.add(parts.sublist(i, (i + group).clamp(0, parts.length)).join());
-    }
-    return grouped.join(' ');
-  }
+  static String hex(List<int> bytes, {int group = 1}) =>
+      bytesToHexGrouped(bytes, group: group);
 }

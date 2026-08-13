@@ -1,5 +1,10 @@
-import 'package:flutter/material.dart';
+import 'dart:io';
 
+import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+
+import '../theme/app_theme.dart';
 import 'radar_pulse.dart';
 
 /// Section label used in settings / more screens.
@@ -351,7 +356,7 @@ void showAppSnack(BuildContext context, String message, {bool isError = false}) 
   final messenger = ScaffoldMessenger.maybeOf(context);
   if (messenger == null) return;
   final bottom =
-      MediaQuery.viewPaddingOf(context).bottom + kBottomNavigationBarHeight;
+      MediaQuery.viewPaddingOf(context).bottom + AppTheme.navBarHeight;
   messenger
     ..hideCurrentSnackBar()
     ..showSnackBar(
@@ -363,4 +368,65 @@ void showAppSnack(BuildContext context, String message, {bool isError = false}) 
         duration: Duration(seconds: isError ? 4 : 3),
       ),
     );
+}
+
+/// Confirm dialog with Cancel / confirm actions. Returns true when confirmed.
+Future<bool> confirmAppAction(
+  BuildContext context, {
+  required String title,
+  required String message,
+  String confirmLabel = 'Confirm',
+  String cancelLabel = 'Cancel',
+  bool destructive = false,
+}) async {
+  final result = await showDialog<bool>(
+    context: context,
+    builder: (ctx) {
+      final scheme = Theme.of(ctx).colorScheme;
+      return AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(cancelLabel),
+          ),
+          FilledButton(
+            style: destructive
+                ? FilledButton.styleFrom(
+                    backgroundColor: scheme.error,
+                    foregroundColor: scheme.onError,
+                  )
+                : null,
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(confirmLabel),
+          ),
+        ],
+      );
+    },
+  );
+  return result ?? false;
+}
+
+Future<void> shareAppText(String text, {String? subject}) {
+  return SharePlus.instance.share(
+    ShareParams(text: text, subject: subject),
+  );
+}
+
+Future<void> shareAppTempFile({
+  required String fileName,
+  required String contents,
+  String mimeType = 'text/plain',
+  String? subject,
+}) async {
+  final dir = await getTemporaryDirectory();
+  final file = File('${dir.path}/$fileName');
+  await file.writeAsString(contents);
+  await SharePlus.instance.share(
+    ShareParams(
+      files: [XFile(file.path, mimeType: mimeType)],
+      subject: subject,
+    ),
+  );
 }

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../../core/debug/app_debug.dart';
+import '../../core/widgets/app_ui.dart';
 import 'debug_provider.dart';
 
 class DebugConsoleScreen extends ConsumerStatefulWidget {
@@ -47,20 +47,18 @@ class _DebugConsoleScreenState extends ConsumerState<DebugConsoleScreen> {
     final text = entries.map((e) => e.toString()).join('\n');
     await Clipboard.setData(ClipboardData(text: text));
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Debug log copied')),
-    );
+    showAppSnack(context, 'Debug log copied');
   }
 
   Future<void> _shareAll(List<DebugEntry> entries) async {
     final text = entries.map((e) => e.toString()).join('\n');
-    await Share.share(text, subject: 'NFC Toolbox debug log');
+    await shareAppText(text, subject: 'NFC Toolbox debug log');
   }
 
   Color _levelColor(DebugLevel level, ColorScheme cs) {
     return switch (level) {
       DebugLevel.info => cs.onSurface,
-      DebugLevel.warn => Colors.orange.shade800,
+      DebugLevel.warn => cs.tertiary,
       DebugLevel.error => cs.error,
     };
   }

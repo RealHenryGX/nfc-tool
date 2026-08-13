@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'dart:convert';
 import '../../core/nfc/nfc_dialog.dart';
+import '../../core/widgets/app_ui.dart';
 import '../../models/tag_template.dart';
 import 'templates_provider.dart';
 
@@ -68,7 +68,10 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen> {
               onPressed: () {
                 Navigator.pop(context);
                 final jsonString = jsonEncode(template.toJson());
-                Share.share(jsonString, subject: 'NFC Tag Template: ${template.name}');
+                shareAppText(
+                  jsonString,
+                  subject: 'NFC Tag Template: ${template.name}',
+                );
               },
             ),
             const SizedBox(height: 24),
@@ -80,6 +83,8 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen> {
 
   void _showQrCodeDialog(TagTemplate template) {
     final jsonString = jsonEncode(template.toJson());
+    final theme = Theme.of(context);
+    final qrSize = (MediaQuery.sizeOf(context).width * 0.55).clamp(160.0, 220.0);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -91,19 +96,19 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
+            Text(
               'Scan this QR code from another NFC Toolbox app to import this template.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+              style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
             ),
             const SizedBox(height: 16),
             SizedBox(
-              width: 200,
-              height: 200,
+              width: qrSize,
+              height: qrSize,
               child: QrImageView(
                 data: jsonString,
                 version: QrVersions.auto,
-                size: 200.0,
+                size: qrSize,
                 errorCorrectionLevel: QrErrorCorrectLevel.M,
               ),
             ),
@@ -122,9 +127,7 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen> {
   void _loadLibraryTemplates() async {
     await ref.read(templatesProvider.notifier).loadPresets();
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Preset library templates added!')),
-      );
+      showAppSnack(context, 'Preset library templates added!');
     }
   }
 
@@ -187,7 +190,7 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.style_outlined, size: 64, color: theme.colorScheme.primary.withOpacity(0.3)),
+                          Icon(Icons.style_outlined, size: 64, color: theme.colorScheme.primary.withValues(alpha: 0.3)),
                           const SizedBox(height: 16),
                           Text(
                             _searchQuery.isNotEmpty ? 'No templates match your search' : 'No Templates Saved',
@@ -199,7 +202,7 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen> {
                                 ? 'Try typing a different name'
                                 : 'Save templates from the Write screen or tap the book icon above to load examples.',
                             textAlign: TextAlign.center,
-                            style: const TextStyle(color: Colors.grey, fontSize: 13),
+                            style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 13),
                           ),
                         ],
                       ),
@@ -229,7 +232,7 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen> {
                                     ),
                                   ),
                                   IconButton(
-                                    icon: const Icon(Icons.play_circle_outline, color: Colors.green, size: 28),
+                                    icon: Icon(Icons.play_circle_outline, color: theme.colorScheme.primary, size: 28),
                                     tooltip: 'Write to NFC Now',
                                     onPressed: () => _triggerWrite(template),
                                   ),
@@ -244,24 +247,24 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen> {
                                 mainAxisAlignment: MainAxisAlignment.end,
                                 children: [
                                   IconButton(
-                                    icon: const Icon(Icons.edit_note_outlined, color: Colors.blue),
+                                    icon: Icon(Icons.edit_note_outlined, color: theme.colorScheme.secondary),
                                     tooltip: 'Edit records',
                                     onPressed: () => context.push('/write', extra: template),
                                   ),
                                   IconButton(
-                                    icon: const Icon(Icons.copy_all_outlined, color: Colors.teal),
+                                    icon: Icon(Icons.copy_all_outlined, color: theme.colorScheme.secondary),
                                     tooltip: 'Duplicate',
                                     onPressed: () {
                                       ref.read(templatesProvider.notifier).duplicateTemplate(template);
                                     },
                                   ),
                                   IconButton(
-                                    icon: const Icon(Icons.share_outlined, color: Colors.purple),
+                                    icon: Icon(Icons.share_outlined, color: theme.colorScheme.secondary),
                                     tooltip: 'Share',
                                     onPressed: () => _shareTemplate(template),
                                   ),
                                   IconButton(
-                                    icon: const Icon(Icons.delete_outline, color: Colors.red),
+                                    icon: Icon(Icons.delete_outline, color: theme.colorScheme.error),
                                     tooltip: 'Delete',
                                     onPressed: () {
                                       ref.read(templatesProvider.notifier).deleteTemplate(template.id);

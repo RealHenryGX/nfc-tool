@@ -102,17 +102,21 @@ class _QrWizardScreenState extends ConsumerState<QrWizardScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.videocam_off_outlined, size: 80, color: Colors.grey),
+              Icon(
+                Icons.videocam_off_outlined,
+                size: 80,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
               const SizedBox(height: 24),
               Text(
                 'Camera Permission Required',
                 style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
-              const Text(
+              Text(
                 'We need camera access to scan QR codes and convert them directly into NFC tags.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
               ),
               const SizedBox(height: 32),
               ElevatedButton.icon(
@@ -144,15 +148,21 @@ class _QrWizardScreenState extends ConsumerState<QrWizardScreen> {
               }
             },
           ),
-          // Transparent frame overlay
+          // Transparent frame overlay — scales with screen, not fixed 250dp
           Center(
-            child: Container(
-              width: 250,
-              height: 250,
-              decoration: BoxDecoration(
-                border: Border.all(color: theme.colorScheme.primary, width: 3),
-                borderRadius: BorderRadius.circular(24),
-              ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final side = (constraints.biggest.shortestSide * 0.68)
+                    .clamp(180.0, 280.0);
+                return Container(
+                  width: side,
+                  height: side,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: theme.colorScheme.primary, width: 3),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                );
+              },
             ),
           ),
           Positioned(
@@ -160,14 +170,16 @@ class _QrWizardScreenState extends ConsumerState<QrWizardScreen> {
             left: 20,
             right: 20,
             child: Card(
-              color: Colors.black87,
+              color: theme.colorScheme.scrim.withValues(alpha: 0.75),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
                 child: Text(
                   'Align QR code inside the frame to convert and write to NFC tag.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white, fontSize: 13),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onInverseSurface,
+                  ),
                 ),
               ),
             ),
@@ -250,9 +262,7 @@ class _QrPreviewWidgetState extends ConsumerState<_QrPreviewWidget> {
     if (confirm == true && nameController.text.trim().isNotEmpty) {
       await ref.read(templatesProvider.notifier).addTemplate(nameController.text.trim(), [finalRecord]);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Template saved successfully!')),
-        );
+        showAppSnack(context, 'Template saved successfully!');
       }
     }
   }
@@ -300,7 +310,7 @@ class _QrPreviewWidgetState extends ConsumerState<_QrPreviewWidget> {
           const SizedBox(height: 8),
           Chip(
             label: Text(widget.record.type.toUpperCase()),
-            backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+            backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
             labelStyle: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),

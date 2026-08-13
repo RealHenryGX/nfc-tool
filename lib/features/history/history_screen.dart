@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
-import 'dart:io';
+import '../../core/widgets/app_ui.dart';
 import '../../models/history.dart';
 import 'history_provider.dart';
 
@@ -29,45 +27,33 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     if (csvString.isEmpty) return;
 
     try {
-      final tempDir = await getTemporaryDirectory();
-      final file = File('${tempDir.path}/nfc_history.csv');
-      await file.writeAsString(csvString);
-      await Share.shareXFiles([XFile(file.path)], text: 'NFC Toolbox History Log');
+      await shareAppTempFile(
+        fileName: 'nfc_history.csv',
+        contents: csvString,
+        mimeType: 'text/csv',
+        subject: 'NFC Toolbox History Log',
+      );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Export failed: $e')),
-        );
+        showAppSnack(context, 'Export failed: $e', isError: true);
       }
     }
   }
 
   void _clearAllHistory() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Clear History?'),
-        content: const Text('This will permanently delete all read/write history logs. Proceed?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Clear All'),
-          ),
-        ],
-      ),
+    final confirm = await confirmAppAction(
+      context,
+      title: 'Clear History?',
+      message:
+          'This will permanently delete all read/write history logs. Proceed?',
+      confirmLabel: 'Clear All',
+      destructive: true,
     );
 
-    if (confirm == true) {
+    if (confirm) {
       await ref.read(historyProvider.notifier).clearAll();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('History cleared successfully!')),
-        );
+        showAppSnack(context, 'History cleared successfully!');
       }
     }
   }
@@ -111,7 +97,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: theme.colorScheme.primary.withOpacity(0.1),
+                              color: theme.colorScheme.primary.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
@@ -161,7 +147,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                   value,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: success ? Colors.green : Colors.red,
+                    color: success ? theme.colorScheme.tertiary : theme.colorScheme.error,
                   ),
                 )
               : Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -240,7 +226,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.history_outlined, size: 64, color: theme.colorScheme.primary.withOpacity(0.3)),
+                          Icon(Icons.history_outlined, size: 64, color: theme.colorScheme.primary.withValues(alpha: 0.3)),
                           const SizedBox(height: 16),
                           Text(
                             _searchQuery.isNotEmpty ? 'No logs match search' : 'No History Logs',
@@ -252,7 +238,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                                 ? 'Try searching different keywords'
                                 : 'Any successful or failed NFC reads and writes will show up here.',
                             textAlign: TextAlign.center,
-                            style: const TextStyle(color: Colors.grey, fontSize: 13),
+                            style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 13),
                           ),
                         ],
                       ),
@@ -265,10 +251,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                       final entry = filteredHistory[index];
                       final dateStr = DateFormat('MMM d, h:mm a').format(entry.timestamp);
                       
-                      Color badgeColor = Colors.grey;
-                      if (entry.action == 'read') badgeColor = Colors.blue;
-                      if (entry.action == 'write') badgeColor = Colors.green;
-                      if (entry.action == 'batch_write') badgeColor = Colors.pink;
+                      Color badgeColor = theme.colorScheme.outline;
+                      if (entry.action == 'read') badgeColor = theme.colorScheme.primary;
+                      if (entry.action == 'write') badgeColor = theme.colorScheme.tertiary;
+                      if (entry.action == 'batch_write') badgeColor = theme.colorScheme.secondary;
 
                       return Card(
                         margin: const EdgeInsets.only(bottom: 8),
@@ -280,7 +266,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: badgeColor.withOpacity(0.15),
+                                  color: badgeColor.withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
@@ -317,14 +303,14 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                                 ),
                                 Text(
                                   dateStr,
-                                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                  style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
                                 ),
                               ],
                             ),
                           ),
                           trailing: Icon(
                             entry.success ? Icons.check_circle_outline : Icons.error_outline,
-                            color: entry.success ? Colors.green : Colors.red,
+                            color: entry.success ? theme.colorScheme.tertiary : theme.colorScheme.error,
                           ),
                         ),
                       );

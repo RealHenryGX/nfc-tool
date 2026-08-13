@@ -59,9 +59,7 @@ class _WriteScreenState extends ConsumerState<WriteScreen> {
 
   void _saveAsTemplate() async {
     if (_records.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cannot save empty records as template')),
-      );
+      showAppSnack(context, 'Cannot save empty records as template', isError: true);
       return;
     }
 
@@ -99,18 +97,14 @@ class _WriteScreenState extends ConsumerState<WriteScreen> {
             _records,
           );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Template saved successfully!')),
-        );
+        showAppSnack(context, 'Template saved successfully!');
       }
     }
   }
 
   void _writeToTag() async {
     if (_records.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please add at least one record to write')),
-      );
+      showAppSnack(context, 'Please add at least one record to write', isError: true);
       return;
     }
 
@@ -212,11 +206,8 @@ class _WriteScreenState extends ConsumerState<WriteScreen> {
                   child: ReorderableListView.builder(
                     padding: const EdgeInsets.all(16),
                     itemCount: _records.length,
-                    onReorder: (oldIndex, newIndex) {
+                    onReorderItem: (oldIndex, newIndex) {
                       setState(() {
-                        if (oldIndex < newIndex) {
-                          newIndex -= 1;
-                        }
                         final item = _records.removeAt(oldIndex);
                         _records.insert(newIndex, item);
                       });
@@ -269,12 +260,20 @@ class _WriteScreenState extends ConsumerState<WriteScreen> {
                                 onPressed: () => _editRecord(index),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.delete_outline, size: 20, color: Colors.red),
+                                icon: Icon(
+                                  Icons.delete_outline,
+                                  size: 20,
+                                  color: theme.colorScheme.error,
+                                ),
                                 onPressed: () => _removeRecord(index),
                               ),
                               ReorderableDragStartListener(
                                 index: index,
-                                child: const Icon(Icons.drag_handle, color: Colors.grey),
+                                child: const SizedBox(
+                                  width: 48,
+                                  height: 48,
+                                  child: Icon(Icons.drag_handle),
+                                ),
                               ),
                             ],
                           ),
