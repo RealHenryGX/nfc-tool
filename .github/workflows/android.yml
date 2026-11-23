@@ -16,7 +16,7 @@ jobs:
           java-version: '17'
       - uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          flutter-version: 3.44.6
           cache: true
       - run: flutter --version
       - run: flutter pub get --enforce-lockfile
@@ -27,3 +27,4 @@ jobs:
           name: nfc-tool-debug-apk
           path: build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: error
+
