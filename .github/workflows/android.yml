@@ -4,7 +4,7 @@ on:
   push:
     branches: [build-android-apk]
 permissions:
-  contents: read
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -28,3 +28,16 @@ jobs:
           name: nfc-tool-release-apks
           path: build/app/outputs/flutter-apk/*-release.apk
           if-no-files-found: error
+      - name: Publish APKs to GitHub Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_SHA: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          tag="android-build-${RUN_ID}-${RUN_ATTEMPT}"
+          gh release create "$tag" build/app/outputs/flutter-apk/*-release.apk \
+            --target "$BUILD_SHA" \
+            --title "Android build ${RUN_ID}.${RUN_ATTEMPT}" \
+            --prerelease \
+            --notes "Automated release-mode build. Signed with the build runner's debug keystore; signatures can differ between builds. Back up app data before replacing an installation signed with another key."
